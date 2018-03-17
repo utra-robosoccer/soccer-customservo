@@ -31,11 +31,20 @@ volatile uint8_t phase = 0;
 const uint8_t PHASES[] = {
 	0b01010011,
 	0b01010001, // resting
-	// OFF_MASK, OFF_MASK,
-	0b01001101, 0b01000101, // resting
-	// OFF_MASK, OFF_MASK,
+	0b01001101,
+	0b01000101, // resting
 	0b01110100,
 	0b01010100 // resting
+};
+const uint8_t RESTING[] = {
+	0b01010001,
+	0b01000101,
+	0b01010100
+};
+const uint8_t PWM_MASKS[] = {
+	0b00000010,
+	0b00001000,
+	0b00100000
 };
 
 // #define BUFF_SIZE 4096
@@ -55,35 +64,31 @@ ISR(PORTD_INT0_vect) {
 	}
 }
 
-ISR(TCC0_OVF_vect) {
-	on_flag = 1;
-	if(1) { // PROGRAM_STATE == INDUCTANCE_ANGLE) {
-		PORTC_OUT = OFF_MASK; // protect against stray energization
-		PORTC_OUT = PHASES[phase << 1];
+// ISR(TCC0_OVF_vect) {
+// 	on_flag = 1;
+// 	if(PROGRAM_STATE == INDUCTANCE_ANGLE) {
+// 		PORTC_OUT = OFF_MASK; // protect against stray energization
+// 		PORTC_OUT = PHASES[phase << 1];
 		
-		PORTD.OUT |= 0x10;
-		
-		phase = (phase + 1) % 3;
-		if(++pwm % PWM_CYCLE_SKIP == 0) {
-			TCC1.CNT = 0; // reset posedge timer
-			thresholded = 0;
-			ADCB.CH0.INTCTRL |= 0b10; // med-pri interrupts for below comparison
-		}
-	}
-	TCC0.INTFLAGS |= 1;
-}
+// 		phase = (phase + 1) % 3;
+// 		if(++pwm % PWM_CYCLE_SKIP == 0) {
+// 			TCC1.CNT = 0; // reset posedge timer
+// 			thresholded = 0;
+// 			ADCB.CH0.INTCTRL |= 0b10; // med-pri interrupts for below comparison
+// 		}
+// 	}
+// 	TCC0.INTFLAGS |= 1;
+// }
 
-ISR(TCC0_CCB_vect) {
-	ADCB_CH0_INTCTRL &= ~(0b10); // disable ADC interrupts foremost
+// ISR(TCC0_CCB_vect) {
+// 	ADCB_CH0_INTCTRL &= ~(0b10); // disable ADC interrupts foremost
 	
-	on_flag = 0;
+// 	on_flag = 0;
 	
-	PORTD.OUT &= ~(0x10);
-	
-	PORTC_OUT = PHASES[1 | (phase << 1)];
-	ADCB_CH0_MUXCTRL = phase << 3;
-	TCC0_INTFLAGS |= 0b10000;
-}
+// 	PORTC_OUT = PHASES[1 | (phase << 1)];
+// 	ADCB_CH0_MUXCTRL = phase << 3;
+// 	TCC0_INTFLAGS |= 0b10000;
+// }
 
 typedef struct saturation_timing_buffer_t {
 	uint16_t buffer[INDUCTANCE_ANGLE_SAMPLES];
@@ -93,27 +98,16 @@ volatile saturation_timing_buffer_t sat_timing_buffers[3];
 
 ISR(ADCB_CH0_vect) {
 	uint16_t t = TCC1.CNT;
-	uint16_t encoder_v = TCD0.CNT;
+	// uint16_t encoder_v = TCD0.CNT;
 	
 	if(t < SATURATION_TIME_THRESHOLD) return; // false alarms
 	
 	if(on_flag && !thresholded) {
-		PORTD.OUT &= ~(0x10);
 		ADCB_CH0_INTCTRL &= ~(0b10);
 		thresholded = 1;
 		
-		if(buff_addr < BUFF_SIZE - 3) {
-			BUFF[buff_addr++] = t;
-			BUFF[buff_addr++] = encoder_v;
-			BUFF[buff_addr++] = phase;
-		}
-		else {
-			buff_full = 1;
-			TCC0.CTRLA = 0;
-		}
-		
-		// if(sat_timing_buffers[phase].counter < INDUCTANCE_ANGLE_SAMPLES)
-		// 	sat_timing_buffers[phase].buffer[sat_timing_buffers[phase].counter++] = t;
+		if(sat_timing_buffers[phase].counter < INDUCTANCE_ANGLE_SAMPLES)
+			sat_timing_buffers[phase].buffer[sat_timing_buffers[phase].counter++] = t;
 	}
 	ADCB_CH0_INTFLAGS = 1;
 }
@@ -139,16 +133,35 @@ int main(void)
 	Drive the motor in open loop until the encoder hits the first tick
 	*/
 	
-	// PORTC.OUT = 0b01010001;
-	// uint16_t CC = OPEN_LOOP_DRIVE_THRESHOLD * 0.85f;
-	// // TCC1.CTRLA = 0b001; // 1x prescaler
-	// while(PROGRAM_STATE == FIRST_ENCODER_TICK) {
-	// 	TCC1.CCB = OPEN_LOOP_DRIVE_THRESHOLD - CC;
-	// 	// _delay_ms(5);
-	// 	// CC >>= 1; // ramp up the duty cycle if we still haven't hit an encoder tick yet
-	// }
+	uint16_t CC = OPEN_LOOP_DRIVE_THRESHOLD * 0.95;
+	uint8_t main_phase = 0;
 	
-	TCC1.CTRLB &= ~(0b0010 << 4);
+	// TCC0.CTRLA = 0b100;
+	
+	TCC0.CCA = 1200;
+	TCC0.CCB = 1200;
+	TCC0.CCC = 1200;
+	
+	PORTC.OUT = RESTING[main_phase];
+	AWEXC.CTRL = 0xF;
+	AWEXC.OUTOVEN = 0b100000;
+	
+	for(;;);
+	
+	while(PROGRAM_STATE == FIRST_ENCODER_TICK) {
+		TCC0.CCA = OPEN_LOOP_DRIVE_THRESHOLD - CC;
+		TCC0.CCB = TCC0.CCA;
+		TCC0.CCC = TCC0.CCC;
+		_delay_ms(270);
+		// CC *= 0.97; // ramp up the duty cycle if we still haven't hit an encoder tick yet
+		AWEXC.OUTOVEN = 0;
+		_delay_us(5);
+		
+		PORTC.OUT = RESTING[main_phase];
+		AWEXC.OUTOVEN = PWM_MASKS[main_phase];
+		
+		main_phase = (main_phase + 1) % 3;
+	}
 	
 	///////////////////////////////////////////////////
 	///////////// PHASE ANGLE MEASUREMENT /////////////
@@ -162,29 +175,15 @@ int main(void)
 	in main until the results are out
 	*/
 	
-	// TEMP
-	TCC0.CTRLA = INDUCTANCE_ANGLE_SCHEDULER_PRESCALER;
-	
-	// while(PROGRAM_STATE == INDUCTANCE_ANGLE) {
-	int persisted = 0;
-	for(;;) {
-		if(buff_full && !persisted) {
-			PORTC.OUT = OFF_MASK;
-			for(uint16_t i = 0; i < BUFF_SIZE; i++) {
-				eeprom_write_word((uint16_t*)(i << 1), BUFF[i]);
-			}
-			persisted = 1;
-			PORTD.OUT &= ~(0x30);
+	while(PROGRAM_STATE == INDUCTANCE_ANGLE) {
+		int all_buffers_full = 1;
+		for(uint8_t i = 0; i < 3; i++)
+			if(sat_timing_buffers[i].counter < INDUCTANCE_ANGLE_SAMPLES)
+				all_buffers_full = 0;
+		if(all_buffers_full) {
+			PROGRAM_STATE = RUNNING;
+			break;
 		}
-		
-		// int all_buffers_full = 1;
-		// for(uint8_t i = 0; i < 3; i++)
-		// 	if(sat_timing_buffers[i].counter < INDUCTANCE_ANGLE_SAMPLES)
-		// 		all_buffers_full = 0;
-		// if(all_buffers_full) {
-		// 	PROGRAM_STATE = RUNNING;
-		// 	break;
-		// }
 	}
 	TCC1.CTRLA = 0; // no more inductance cycles
 	PORTC.OUT = OFF_MASK;

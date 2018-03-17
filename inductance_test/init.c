@@ -34,35 +34,37 @@ void timer_init() {
 	///// C0: INDUCTANCE ANGLE SCHEDULER /////
 	//////////////////////////////////////////
 	
-	TCC0.CTRLB = // (1 << 5) | // override PC1 (CCB)
-	             0b000; // normal mode, generate interrupts
-	TCC0.CTRLA = 0b100; // 8x prescaler
+	// TCC0.CTRLB = // (1 << 5) | // override PC1 (CCB)
+	//              0b000; // normal mode, generate interrupts
+	// TCC0.CTRLA = 0b100; // 8x prescaler
 	
-	TCC0.PER = 1 << 13; // 12-bit timer on 1MHz peripheral clock -> 256Hz PWM
-	TCC0.INTCTRLA |= 0b11;
-	TCC0.INTCTRLB |= 0b11 << 2; // CCB trigger
+	// TCC0.PER = 1 << 13; // 12-bit timer on 1MHz peripheral clock -> 256Hz PWM
+	// TCC0.INTCTRLA |= 0b11;
+	// TCC0.INTCTRLB |= 0b11 << 2; // CCB trigger
 	
-	short cc = TCC0.PER * 0.05f;
-	// short cc = TCC0.PER * (1 - duty);
-	TCC0.CCA = cc;
-	TCC0.CCB = cc;
+	// short cc = TCC0.PER * 0.05f;
+	// // short cc = TCC0.PER * (1 - duty);
+	// TCC0.CCA = cc;
+	// TCC0.CCB = cc;
 	
-	EVSYS.CH0MUX = (0b1100 << 4) | // TCC0 writes event channel 0
-	(0b0100); // CCA trigger
+	// EVSYS.CH0MUX = (0b1100 << 4) | // TCC0 writes event channel 0
+	// (0b0100); // CCA trigger
 	
-	EVSYS.CH1MUX = (0b1100 << 4) | // TCC0 writes to event channel 1
-	(0b0000); // overflow trigger
+	// EVSYS.CH1MUX = (0b1100 << 4) | // TCC0 writes to event channel 1
+	// (0b0000); // overflow trigger
 	
 	///////////////////////////////////
 	///// C1: OPEN-LOOP DRIVE PWM /////
 	///////////////////////////////////
 	
 	// TCC1.CTRLA = 0b001; // 1x prescaler
-	TCC1.CTRLB = 0b0010 << 4 | // override C5
+	TCC0.CTRLB = // 0b0010 << 4 | // override C1
 	             0b101; // dual-slope PWM
-	TCC1.CTRLA = OPEN_LOOP_DRIVE_PRESCALER;
-	TCC1.PER = OPEN_LOOP_DRIVE_PER;
-	TCC1.CCB = 0;
+	TCC0.CTRLA = OPEN_LOOP_DRIVE_PRESCALER;
+	TCC0.PER = OPEN_LOOP_DRIVE_PER;
+	TCC0.CCA = 0;
+	TCC0.CCB = 0;
+	TCC0.CCC = 0;
 	
 	//////////////////////////////////
 	///// D0: QUADRATURE DECODER /////
