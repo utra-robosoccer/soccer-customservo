@@ -1,0 +1,16 @@
+#define BUFF_SIZE 512
+#define ADC_TRIGGER 111 // 10.7V after 220ohm-4.7kohm divider, for 1.1V bandgap reference
+
+#define NUM_SAMPLES_PER_PWM 14
+#define PWM_CYCLE_SKIP 32
+#define SQRT_THREE_OVER_TWO 0.8660254038
+#define OFF_MASK 0b01010101
+// #define F_CPU 32000000L
+
+#define OPEN_LOOP_DRIVE_PER 8192 // 12-bit timer
+#define OPEN_LOOP_DRIVE_THRESHOLD 2400 // 12.5% duty max
+#define OPEN_LOOP_DRIVE_PRESCALER 0b100 // 1x prescaler
+
+#define INDUCTANCE_ANGLE_SCHEDULER_PRESCALER 0b100 // 8x prescaler
+#define INDUCTANCE_ANGLE_SAMPLES 10
+#define SATURATION_TIME_THRESHOLD 70
