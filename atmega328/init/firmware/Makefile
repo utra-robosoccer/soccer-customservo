@@ -18,9 +18,9 @@
 # FUSES ........ Parameters for avrdude to flash the fuses appropriately.
 
 DEVICE     = atmega328p
-CLOCK      = 16000000
+CLOCK      = 12000000
 PROGRAMMER = -c avrispmkII -P usb
-OBJECTS    = main.o
+OBJECTS    = inverter.o
 FUSES      = -U lfuse:w:0x27 # -U hfuse:w:0xd9:m -U lfuse:w:0x22:m
 
 # ATMega8 fuse bits used above (fuse bits for other devices are different!):
