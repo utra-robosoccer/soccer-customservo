@@ -11,21 +11,6 @@ void port_init() {
 	EIMSK |= 0b11; // enable INT1 and INT0
 }
 void timer_init() {
-	TCCR0A = 0b00 << 6 | // don't touch OC0A // 0b11 << 6 | // OC0A inverted PWM (NMOS control)
-	         0b00 << 4 | // don't touch OC0B
-	         0b11; // fast PWM (needed to detect on-off cycles)
-	TCCR0B = 0 << 3 | // fast PWM (continued)
-	         0b011; // 64x prescaling (1024Hz PWM)
-	         // 0b101; // 1024x prescaling (64Hz)
-	OCR0A = 0;
-	TIMSK0 = 0b011; // enable compare match A; enable overflow interrupt
-	
-	TCCR1A = 0b00 << 6 | // don't touch OC0A
-	         0b00 << 4 | // don't touch OC0B
-	         0b00000; // Normal mode
-	TCCR1B |= 0b11 << 6 | // input capture: rising edge with noise cancellation
-	          0b01; // no prescaling
-	// TIMSK1 = 1 << 5; // enable input capture interrupt
 }
 void ac_init() {
 	// ADC0 implicitly from ADMUX & 0xF = 0

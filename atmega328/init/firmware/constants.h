@@ -15,8 +15,6 @@
 #define INDUCTANCE_ANGLE_SAMPLES 10
 #define SATURATION_TIME_THRESHOLD 70
 
-#define SPEED_BUFFER_SIZE 3
-
 #define SIGMA_A 330
 #define SIGMA_B -325 // negative because we're measuring in the opposite direction
 #define SIGMA_C 200
