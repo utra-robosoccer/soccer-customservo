@@ -37,14 +37,13 @@ int main(void)
 	WakeupState s0 = WakeupState();
 	FirstEncoderTickState s1 = FirstEncoderTickState();
 	InductanceAngleState s2 = InductanceAngleState();
-	SecondEncoderTickState s3 = SecondEncoderTickState();
-	RunningState s4 = RunningState();
+	// SecondEncoderTickState s3 = SecondEncoderTickState();
+	RunningState s3 = RunningState();
 	
 	states[0] = &s0;
 	states[1] = &s1;
 	states[2] = &s2;
 	states[3] = &s3;
-	states[4] = &s4;
 	
 	sei();
 
