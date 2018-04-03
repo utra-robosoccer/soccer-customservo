@@ -10,6 +10,7 @@
 #include "States/WakeupState.h"
 #include "States/FirstEncoderTickState.h"
 #include "States/InductanceAngleState.h"
+// #include "States/SecondEncoderTickState.h"
 #include "States/RunningState.h"
 
 #define MEMBER_FN(obj, member) ((obj).*(member))
@@ -23,25 +24,12 @@ static inline void put_commutation(uint8_t c) {
 		// PORTD = (PORTD & ~(0b111 << 5)) | ((c & 0b111) << 5); // so long as this is coming from resting, it shouldn't be possible to short (LSb of PORTB should be 0)
 		// PORTB = (PORTB & ~(0b111)) | ((c >> 3) & 0b111);
 	// }
-	PORTC = (PORTC & ~(0b111111)) | (c & 0b111111);
+	PORTB = (PORTB & ~(0b111111)) | (c & 0b111111);
 }
-
-/////////
-// ISR //
-/////////
-
-typedef void (*ISR_t)(void);
 
 // ISR_t* ISR_registry[NUM_VECTORS];
 
 extern State* states[NUM_PROGRAM_STATES];
-namespace Encoder {
-	extern volatile uint8_t last_Q0; 
-	extern volatile uint8_t last_Q90;
-	extern volatile uint8_t speed_buffer_idx;
-	extern volatile uint8_t valid_speed_buffer_samples; 
-	extern volatile int16_t position;
-}
 
 // static inline void register_ISR(uint8_t vect, program_state_t state, ISR_t fn) {
 // 	if(state < NUM_PROGRAM_STATES && vect < NUM_VECTORS) {

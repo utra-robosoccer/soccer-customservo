@@ -1,19 +1,20 @@
 #include "../main.h"
 #include "../State.h"
+#include "../Encoder.h"
 #include "InductanceAngleState.h"
+#include <math.h>
+#include <avr/eeprom.h>
 
-const uint8_t InductanceAngleState::adc[3] = {
-	4, 4, 5 // NEEDS CORRECTING
+const uint8_t InductanceAngleState::adc[2] = {
+	2, 2
 };
-const uint8_t InductanceAngleState::PHASES[3] = {
-	0b01110100,
-	0b01110001,
-	0b01010011
+const uint8_t InductanceAngleState::PHASES[2] = {
+	0b110100, // REVERSE: this will be inverted wrt mean to get the right sign for angle
+	0b110001 // FORWARD
 };
-const uint8_t InductanceAngleState::RESTING[3] = {
-	0b01010100,
-	0b01000101,
-	0b01000101
+const uint8_t InductanceAngleState::RESTING[2] = {
+	0b010100,
+	0b010001
 };
 
 InductanceAngleState::InductanceAngleState(void) {
@@ -22,17 +23,35 @@ InductanceAngleState::InductanceAngleState(void) {
 	// register_ISR(TIMER1_CAPT_vect_num, INDUCTANCE_ANGLE, &this->t1_capt);
 }
 void InductanceAngleState::setup(const State& previous) {
+	if(previous.state_type() == FIRST_ENCODER_TICK) {
+		this->FirstEncoderTick_phase = ((const FirstEncoderTickState&)previous).phase;
+		this->FirstEncoderTick_direction = ((const FirstEncoderTickState&)previous).direction;
+	}
+	else {
+		this->FirstEncoderTick_phase = -1;
+		this->FirstEncoderTick_direction = -1;
+	}
 	// clear timing buffers
 	for(uint8_t i = 0; i < 3; i++)
 		sat_timing_buffers[i].counter = 0;
+		
+	// disable encoder interrupts
+	EIMSK &= ~(0b11);
 	
 	// initialize AC
-	// ADC0 implicitly from ADMUX & 0xF = 0
+	// ADC0 from ADMUX & 0xF = 0
+	ADMUX &= 0xF0;
 	ADCSRB |= 1 << 6; // ADC0 input to comparator
 	ADCSRB = (ADCSRB & ~(0b111)) | 0b000; // free-running mode
-	ACSR |= 1 << 3 | // enable interrupts
+	ACSR |= // 1 << 3 | // enable interrupts
 	        1 << 2; // | // enable AC input capture
 	       // 0b11; // toggle triggers interrupt
+	
+	// setup TIMER0 for pushing square waves through the motor
+	TCCR0A = 0b0000; // normal mode
+	TCCR0B = 0b011; // 64x prescaling
+	TIMSK0 = 0b011; // COMPA and OVF interrupts
+	OCR0A = 40;
 	
 	// setup TIMER1 for timing the threshold crossings
 	TCCR1A = 0b00 << 6 | // don't touch OC0A
@@ -40,12 +59,13 @@ void InductanceAngleState::setup(const State& previous) {
 	         0b00000; // Normal mode
 	TCCR1B |= 0b11 << 6; // input capture: rising edge with noise cancellation
    TCCR1B = (TCCR1B & ~(0b11)) | 0b01; // no prescaling
+   TIMSK1 = 1 << 5; // only enable input capture interrupt
 }
 void InductanceAngleState::spin(void) {
 	uint8_t buffers_full;
 	do {
 		buffers_full = 1;
-		for(uint8_t i = 0; i < 3; i++) {
+		for(uint8_t i = 0; i < 2; i++) {
 			if(sat_timing_buffers[i].counter < INDUCTANCE_ANGLE_SAMPLES) {
 				buffers_full = 0;
 				break;
@@ -54,6 +74,23 @@ void InductanceAngleState::spin(void) {
 	}
 	while(!buffers_full);
 	
+	int16_t fwd_avg = 0, back_avg = 0;
+	for(uint8_t i = 0; i < INDUCTANCE_ANGLE_SAMPLES; i++) {
+		back_avg += (int16_t)(sat_timing_buffers[0].buffer[i]) - TIMING_MU;
+		fwd_avg += (int16_t)(sat_timing_buffers[1].buffer[i]) - TIMING_MU;
+		// eeprom_write_word((uint16_t*)(i << 2), sat_timing_buffers[0].buffer[i]);
+		// eeprom_write_word((uint16_t*)((i << 2) + 2), sat_timing_buffers[1].buffer[i]);
+	}
+	back_avg /= -INDUCTANCE_ANGLE_SAMPLES;
+	fwd_avg /= INDUCTANCE_ANGLE_SAMPLES;
+	
+	this->A_phase_angle = acos(SQRT3_OVER_2 * fwd_avg / sqrt(fwd_avg * fwd_avg + fwd_avg * back_avg + back_avg * back_avg)) * 128;
+	// eeprom_write_word((uint16_t*)(INDUCTANCE_ANGLE_SAMPLES << 2), 0xFFC0);
+	// eeprom_write_word((uint16_t*)((INDUCTANCE_ANGLE_SAMPLES << 2) + 2), 0x00EE);
+	// eeprom_write_byte((uint8_t*)((INDUCTANCE_ANGLE_SAMPLES << 2) + 4), this->A_phase_angle);
+	
+	for(;;);
+		
 	PROGRAM_STATE = RUNNING;
 }
 
@@ -72,7 +109,7 @@ void InductanceAngleState::ISR_entry(uint8_t vect) {
 }
 
 void InductanceAngleState::t0_ovf(void) {
-	phase = (phase + 1) % 3;
+	phase = (phase + 1) & 1;
 	triggered = 0;
 	
 	TCNT1 = 0; // reset threshold timer
@@ -88,6 +125,7 @@ void InductanceAngleState::t0_compa(void) {
 	put_commutation(RESTING[phase]);
 }
 void InductanceAngleState::t1_capt(void) {
+		
 	if(!triggered && sat_timing_buffers[phase].counter < INDUCTANCE_ANGLE_SAMPLES) {
 		// PORTB ^= 0b1000;
 		sat_timing_buffers[phase].buffer[sat_timing_buffers[phase].counter++] = ICR1;

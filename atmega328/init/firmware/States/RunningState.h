@@ -17,6 +17,9 @@ class RunningState : public State {
 		void spin(void);
 		void teardown(void);
 		void ISR_entry(uint8_t ISR_num);
+		inline program_state_t state_type(void) const {
+			return RUNNING;
+		}
 		
 	private:
 		void t0_ovf(void);

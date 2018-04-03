@@ -18,9 +18,9 @@
 # FUSES ........ Parameters for avrdude to flash the fuses appropriately.
 
 DEVICE     = atmega328p
-CLOCK      = 12000000
+CLOCK      = 16000000
 PROGRAMMER = -c avrispmkII -P usb
-OBJECTS    = States/WakeupState.o States/FirstEncoderTickState.o States/InductanceAngleState.o States/RunningState.o main.o
+OBJECTS    = Encoder.o States/WakeupState.o States/EncoderTickState.o States/FirstEncoderTickState.o States/InductanceAngleState.o States/SecondEncoderTickState.o States/RunningState.o main.o
 FUSES      = -U lfuse:w:0x27 # -U hfuse:w:0xd9:m -U lfuse:w:0x22:m
 
 # ATMega8 fuse bits used above (fuse bits for other devices are different!):

@@ -1,5 +1,5 @@
-#include "../main.h"
 #include "../State.h"
+#include "../Encoder.h"
 #include "RunningState.h"
 
 RunningState::RunningState(void) {
@@ -12,6 +12,7 @@ void RunningState::setup(const State& previous_state) {
 	// setup TIMER0 COMPA and COMPB + TIMER1 COMPB to publish to phases,
 	// setup TIMER2 to estimate the velocity
 	
+	EIMSK |= 0b11; // enable INT1 and INT0
 }
 void RunningState::spin() {
 	if(this->valid_speed_buffer_samples < SPEED_BUFFER_SIZE)

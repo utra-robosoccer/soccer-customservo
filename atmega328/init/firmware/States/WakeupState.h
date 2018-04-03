@@ -1,22 +1,25 @@
 #ifndef _WAKEUP_STATE_H
 #define _WAKEUP_STATE_H 1
 
-#include "../main.h"
 #include "../State.h"
 
 class WakeupState : public State {
 	public:
 		WakeupState(void);
 		void setup(const State& previous_state);
-		inline void spin(void) {}
-		inline void teardown(void) {}
+		void spin(void);
+		inline void teardown(void) {
+		}
 		void ISR_entry(uint8_t ISR_num);
+		inline program_state_t state_type(void) const {
+			return WAKEUP;
+		}
 		
 	private:
 		inline void port_init() {
-			DDRC = 0b111; // output C0-C2 (motor phases)
-			DDRB = 0x0F | (1 << 5); // output all motor phases, indicator and on pin 13
+			DDRB = 0x3F; // output all motor phases
 			PORTB &= ~(1 << 5);
+			DDRD = 1 << 4;
 			
 			EICRA = 0b01 << 2 | // logic-level change on INT1 generates INT1
 			        0b01;  // logic-level change on INT0 generates INT0

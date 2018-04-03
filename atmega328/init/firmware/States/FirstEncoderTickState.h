@@ -1,16 +1,14 @@
 #ifndef _FIRST_ENCODER_TICK_STATE_H
 #define _FIRST_ENCODER_TICK_STATE_H 1
 
-#include "../main.h"
-#include "../State.h"
+#include "EncoderTickState.h" // import/share PHASES and RESTING
 
-class FirstEncoderTickState : public State {
+class FirstEncoderTickState : public EncoderTickState {
 	public:
-		static const uint8_t PHASES[3]; // separated by 120deg, one of these ought to work!
-	
-	private:
+		// state exports
+		uint8_t direction; // 0 for backwards, 1 for forwards
+	protected:
 		static const program_state_t STATE_ENUM = FIRST_ENCODER_TICK;
-		uint8_t phase;
 	
 	public:
 		FirstEncoderTickState(void);
@@ -18,13 +16,8 @@ class FirstEncoderTickState : public State {
 		void spin(void);
 		inline void teardown(void) {}
 		void ISR_entry(uint8_t ISR_num);
-	
-	private:
-		inline void t0_ovf(void) {
-			
-		}
-		inline void t0_compa(void) {
-			
+		inline program_state_t state_type(void) const {
+			return FIRST_ENCODER_TICK;
 		}
 };
 
