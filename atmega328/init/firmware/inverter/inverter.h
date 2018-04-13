@@ -1,7 +1,5 @@
 #include <avr/io.h>
 
-#include "pin_util.h"
-
 volatile uint16_t phase_idx[3] = {
 	0, 171, 341
 };
