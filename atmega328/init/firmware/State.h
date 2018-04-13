@@ -11,8 +11,7 @@ typedef enum program_state_t
 	WAKEUP = 0,
 	FIRST_ENCODER_TICK = 1,
 	INDUCTANCE_ANGLE = 2,
-	SECOND_ENCODER_TICK = 3,
-	RUNNING = 4
+	RUNNING = 3
 } program_state_t;
 
 extern program_state_t PROGRAM_STATE;

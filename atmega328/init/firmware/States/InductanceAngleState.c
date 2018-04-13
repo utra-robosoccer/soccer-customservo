@@ -24,11 +24,11 @@ InductanceAngleState::InductanceAngleState(void) {
 }
 void InductanceAngleState::setup(const State& previous) {
 	if(previous.state_type() == FIRST_ENCODER_TICK) {
-		this->FirstEncoderTick_phase = ((const FirstEncoderTickState&)previous).phase;
+		// this->FirstEncoderTick_phase = ((const FirstEncoderTickState&)previous).phase;
 		this->FirstEncoderTick_direction = ((const FirstEncoderTickState&)previous).direction;
 	}
 	else {
-		this->FirstEncoderTick_phase = -1;
+		// this->FirstEncoderTick_phase = -1;
 		this->FirstEncoderTick_direction = -1;
 	}
 	// clear timing buffers
@@ -84,12 +84,20 @@ void InductanceAngleState::spin(void) {
 	back_avg /= -INDUCTANCE_ANGLE_SAMPLES;
 	fwd_avg /= INDUCTANCE_ANGLE_SAMPLES;
 	
-	this->A_phase_angle = acos(SQRT3_OVER_2 * fwd_avg / sqrt(fwd_avg * fwd_avg + fwd_avg * back_avg + back_avg * back_avg)) * 128;
+	this->A_phase_angle = abs((uint16_t)(acos(SQRT3_OVER_2 * fwd_avg / sqrt(fwd_avg * fwd_avg + fwd_avg * back_avg + back_avg * back_avg)) * 256))
+	                      + ((!this->FirstEncoderTick_direction) << 8)
+	                      - 512 / 12; // 30deg, hope I got the sign right :S
 	// eeprom_write_word((uint16_t*)(INDUCTANCE_ANGLE_SAMPLES << 2), 0xFFC0);
 	// eeprom_write_word((uint16_t*)((INDUCTANCE_ANGLE_SAMPLES << 2) + 2), 0x00EE);
 	// eeprom_write_byte((uint8_t*)((INDUCTANCE_ANGLE_SAMPLES << 2) + 4), this->A_phase_angle);
 	
-	for(;;);
+	// for(;;);
+	
+	// PORTD |= 1 << 4;
+	PORTB |= OFF_MASK;
+	TIMSK1 = 0;
+	TIMSK0 = 0;
+	// for(;;);
 		
 	PROGRAM_STATE = RUNNING;
 }

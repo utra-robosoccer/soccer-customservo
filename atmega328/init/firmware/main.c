@@ -28,6 +28,9 @@ ISR(TIMER1_CAPT_vect) {
 ISR(TIMER1_COMPB_vect) {
 	hit_registry(TIMER1_COMPB_vect_num);
 }
+ISR(TIMER2_OVF_vect) {
+	hit_registry(TIMER2_OVF_vect_num);
+}
 
 int8_t SPEED = 60;
 program_state_t PROGRAM_STATE = WAKEUP;

@@ -14,7 +14,7 @@ class InductanceAngleState: public State {
 		int8_t A_phase_angle;
 		
 		// state import-exports
-		int8_t FirstEncoderTick_phase;
+		// int8_t FirstEncoderTick_phase;
 		int8_t FirstEncoderTick_direction;
 		
 	protected:
