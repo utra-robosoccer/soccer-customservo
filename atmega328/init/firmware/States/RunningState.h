@@ -29,26 +29,29 @@ class RunningState : public State {
 		}
 		
 	private:
-		inline void t0_ovf(void) {
-			PORTB &= OFF_MASK;
-		}
-		inline void t0_compa(void) {
-			if((this->A_phase_angle >> 8) & 1)
-				PORTB |= 0b11;
-			else
-				PORTB &= 0b111100;
-		}
-		inline void t0_compb(void) {
-			if(((this->A_phase_angle + 171) >> 8) & 1)
-				PORTB |= 0b1100;
-			else
-				PORTB &= 0b110011;
-		}
-		inline void t1_compb(void) {
-			if(((this->A_phase_angle + 341) >> 8) & 1)
-				PORTB |= 0b110000;
-			else
-				PORTB &= 0b001111;
+		// inline void t0_ovf(void) {
+		// 	PORTB &= OFF_MASK;
+		// }
+		// inline void t0_compa(void) {
+		// 	if((this->A_phase_angle >> 8) & 1)
+		// 		PORTB |= 0b11;
+		// 	else
+		// 		PORTB &= 0b111100;
+		// }
+		// inline void t0_compb(void) {
+		// 	if(((this->A_phase_angle + 171) >> 8) & 1)
+		// 		PORTB |= 0b1100;
+		// 	else
+		// 		PORTB &= 0b110011;
+		// }
+		// inline void t1_compb(void) {
+		// 	if(((this->A_phase_angle + 341) >> 8) & 1)
+		// 		PORTB |= 0b110000;
+		// 	else
+		// 		PORTB &= 0b001111;
+		// }
+		inline void t2_compa(void) {
+			// 
 		}
 		inline void t2_ovf(void) {
 		}

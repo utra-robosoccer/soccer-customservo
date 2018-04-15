@@ -1,10 +1,10 @@
 #include "EncoderTickState.h"
 
-const uint8_t EncoderTickState::PHASES[2] = {
-	0b011100, // REVERSE
-	0b001101 // FORWARD
+const commutation_t EncoderTickState::PHASES[2] = {
+	{ .p = 0b100, .n = 0b010 }, // REVERSE
+	{ .p = 0b100, .n = 0b001 } // FORWARD
 };
-const uint8_t EncoderTickState::RESTING[2] = {
-	0b010100,
-	0b000101
+const commutation_t EncoderTickState::RESTING[2] = {
+	{ .p = 0b000, .n = 0b010 },
+	{ .p = 0b000, .n = 0b001 }
 };

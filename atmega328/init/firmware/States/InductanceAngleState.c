@@ -2,19 +2,20 @@
 #include "../State.h"
 #include "../Encoder.h"
 #include "InductanceAngleState.h"
+
 #include <math.h>
 #include <avr/eeprom.h>
 
 const uint8_t InductanceAngleState::adc[2] = {
 	2, 2
 };
-const uint8_t InductanceAngleState::PHASES[2] = {
-	0b110100, // REVERSE: this will be inverted wrt mean to get the right sign for angle
-	0b110001 // FORWARD
+const commutation_t InductanceAngleState::PHASES[2] = {
+	{ .p = 0b100, .n = 0b010 },
+	{ .p = 0b100, .n = 0b001 }
 };
-const uint8_t InductanceAngleState::RESTING[2] = {
-	0b010100,
-	0b010001
+const commutation_t InductanceAngleState::RESTING[2] = {
+	{ .p = 0b000, .n = 0b010 },
+	{ .p = 0b000, .n = 0b001 }
 };
 
 InductanceAngleState::InductanceAngleState(void) {
@@ -94,7 +95,8 @@ void InductanceAngleState::spin(void) {
 	// for(;;);
 	
 	// PORTD |= 1 << 4;
-	PORTB |= OFF_MASK;
+	PUT(OFF_MASK_P, OFF_MASK_N);
+	// PORTB |= OFF_MASK;
 	TIMSK1 = 0;
 	TIMSK0 = 0;
 	// for(;;);
@@ -125,12 +127,12 @@ void InductanceAngleState::t0_ovf(void) {
 	TIMSK1 &= ~(1 << 5); // disable input capture interrupt
 	ADMUX = (ADMUX & ~(0b11)) | this->adc[this->phase];
 	
-	put_commutation(OFF_MASK); // de-energize for a bit to avoid short
-	put_commutation(PHASES[phase]);
+	PUT(OFF_MASK_P, OFF_MASK_N); // de-energize for a bit to avoid short
+	PUT(PHASES[phase].p, PHASES[phase].n);
 	TIMSK1 |= 1 << 5; // re-enable input capture interrupt
 }
 void InductanceAngleState::t0_compa(void) {
-	put_commutation(RESTING[phase]);
+	PUT(RESTING[phase].p, RESTING[phase].n);
 }
 void InductanceAngleState::t1_capt(void) {
 		

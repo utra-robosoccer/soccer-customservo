@@ -2,12 +2,13 @@
 #define _INDUCTANCE_ANGLE_STATE_H 1
 
 #include "../State.h"
+#include "../pin_util.h"
 
 class InductanceAngleState: public State {
 	// logic for rectangular pulses found in TIMER1 OVF and COMPA
-	static const uint8_t PHASES[2];
+	static const commutation_t PHASES[2];
 	static const uint8_t adc[2];
-	static const uint8_t RESTING[2];
+	static const commutation_t RESTING[2];
 	
 	public:
 		// state exports

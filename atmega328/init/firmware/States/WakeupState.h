@@ -17,9 +17,14 @@ class WakeupState : public State {
 		
 	private:
 		inline void port_init() {
-			DDRB = 0x3F; // output all motor phases
-			PORTB &= ~(1 << 5);
-			DDRD = 1 << 4;
+			// PWM pins
+			DDRD = 1 << 5 | 1 << 6;
+			DDRB = 1 << 2 | 1 << 5;
+			
+			// control pins
+			DDRC |= 0b111 << 3;
+			PORTB = 0;
+			PORTD = 0;
 			
 			EICRA = 0b01 << 2 | // logic-level change on INT1 generates INT1
 			        0b01;  // logic-level change on INT0 generates INT0
