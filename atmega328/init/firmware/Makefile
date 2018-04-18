@@ -20,7 +20,7 @@
 DEVICE     = atmega328p
 CLOCK      = 16000000
 PROGRAMMER = -c avrispmkII -P usb
-OBJECTS    = inverter/inverter.o # Encoder.o States/WakeupState.o States/EncoderTickState.o States/FirstEncoderTickState.o States/InductanceAngleState.o States/RunningState.o main.o # States/SecondEncoderTickState.o 
+OBJECTS    = Encoder.o States/WakeupState.o States/EncoderTickState.o States/FirstEncoderTickState.o States/InductanceAngleState.o States/RunningState.o main.o # States/SecondEncoderTickState.o 
 FUSES      = -U lfuse:w:0x27 # -U hfuse:w:0xd9:m -U lfuse:w:0x22:m
 
 # ATMega8 fuse bits used above (fuse bits for other devices are different!):
@@ -50,7 +50,7 @@ FUSES      = -U lfuse:w:0x27 # -U hfuse:w:0xd9:m -U lfuse:w:0x22:m
 
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
 OUT = eeprom
-COMPILE = avr-g++ -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -std=c++11
+COMPILE = avr-g++ -Wall -Wno-narrowing -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -std=c++11
 
 # symbolic targets:
 all:	main.hex

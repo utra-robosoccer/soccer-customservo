@@ -1,4 +1,5 @@
 #include "Encoder.h"
+#include "State.h"
 
 namespace Encoder {
 	volatile uint8_t last_Q0 = 0;
@@ -9,16 +10,22 @@ namespace Encoder {
 	
 	ISR(INT0_vect) {
 		// hit_registry(INT0_vect_num);
-			
-		uint8_t current_Q0 = (PIND & 0b100) >> 2;
-		if(last_Q0 != current_Q0) {
-			if(last_Q0 != last_Q90)
-				position++;
-			else
-				position--;
-		}
-		last_Q0 = current_Q0;
-		EIFR |= 1;
+		position--;
+		
+		// if(PROGRAM_STATE == RUNNING) {
+		// 	position--;
+		// 	return;
+		// }
+		
+		// uint8_t current_Q0 = (PIND & 0b100) >> 2;
+		// if(last_Q0 != current_Q0) {
+		// 	if(last_Q0 != last_Q90)
+		// 		position++;
+		// 	else
+		// 		position--;
+		// }
+		// last_Q0 = current_Q0;
+		// EIFR |= 1;
 	}
 	ISR(INT1_vect) {
 		// hit_registry(INT1_vect_num);
@@ -31,6 +38,6 @@ namespace Encoder {
 				position--;
 		}
 		last_Q90 = current_Q90;
-		EIFR |= 0b10;
+		// EIFR |= 0b10;
 	}
 }

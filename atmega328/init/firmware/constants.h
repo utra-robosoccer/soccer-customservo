@@ -4,8 +4,8 @@
 #define BUFF_SIZE 512
 #define ADC_TRIGGER 111 // 10.7V after 220ohm-4.7kohm divider, for 1.1V bandgap reference
 
-#define ENCODER_CPR 1600
-#define MOTOR_PPR 14
+#define ENCODER_TICKS_PER_MOTOR_PHASE 400 / 7
+#define MOTOR_PHASES_PER_ENCODER_TICK 7 / 400 // depending on the required associativity
 #define ENCODER_DIV_MOTOR_GCD 800 // 800 ticks over 7 phase rotations
 
 #define NUM_SAMPLES_PER_PWM 14
@@ -23,7 +23,9 @@
 #define INDUCTANCE_ANGLE_SAMPLES 10
 #define SATURATION_TIME_THRESHOLD 70
 
-#define TIMING_MU 682
+#define MAJORITY_THRESHOLD 3
+
+#define TIMING_MU 340
 // #define MU_B 682
 
 #define NUM_HALF_SINE 256

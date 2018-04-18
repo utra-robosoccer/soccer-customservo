@@ -19,7 +19,7 @@ class WakeupState : public State {
 		inline void port_init() {
 			// PWM pins
 			DDRD = 1 << 5 | 1 << 6;
-			DDRB = 1 << 2 | 1 << 5;
+			DDRB = 1 << 3 | 1 << 5;
 			
 			// control pins
 			DDRC |= 0b111 << 3;

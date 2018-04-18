@@ -4,6 +4,16 @@
 #include "../State.h"
 #include "../constants.h"
 
+#define SET_PHASE(phase) {\
+	uint8_t phase_masks[3] = { (phase >> 8) & 1, ((phase + 171) >> 8) & 1, ((phase + 341) >> 8) & 1 };\
+	OCR0B = HALF_SINE[phase & 0xFF];\
+	OCR0A = HALF_SINE[(phase + 171) & 0xFF];\
+	OCR2A = HALF_SINE[(phase + 341) & 0xFF];\
+	TCCR0A = (TCCR0A & 0b00001111) | (-(!phase_masks[1]) & 0b11000000) | (-(!phase_masks[0]) & 0b00110000);\
+	TCCR2A = (TCCR2A & 0b00111111) | (-(!phase_masks[2]) & 0b11000000);\
+	PORTC = (PORTC & 0b11000111) | (phase_masks[2] << 5) | (phase_masks[0] << 4) | (phase_masks[1] << 3);\
+}
+
 class RunningState : public State {
 	static const program_state_t STATE_ENUM = RUNNING;
 	static const uint8_t SPEED_BUFFER_SIZE = 10;
@@ -29,6 +39,7 @@ class RunningState : public State {
 		}
 		
 	private:
+		uint16_t phase;
 		// inline void t0_ovf(void) {
 		// 	PORTB &= OFF_MASK;
 		// }

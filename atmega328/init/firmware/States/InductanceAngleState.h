@@ -12,7 +12,7 @@ class InductanceAngleState: public State {
 	
 	public:
 		// state exports
-		int8_t A_phase_angle;
+		int16_t A_phase_angle;
 		
 		// state import-exports
 		// int8_t FirstEncoderTick_phase;
@@ -42,7 +42,7 @@ class InductanceAngleState: public State {
 	
 	private:
 		void t0_ovf(void);
-		void t0_compa(void);
+		void t0_compb(void);
 		void t1_capt(void);
 };
 

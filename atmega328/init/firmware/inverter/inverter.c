@@ -3,11 +3,24 @@
 #include <avr/interrupt.h>
 #include <util/atomic.h>
 #include <stdlib.h>
+#include <avr/eeprom.h>
 
 #include "../constants.h"
+#include "../pin_util.h"
 #include "inverter.h"
+#include "../Encoder.h"
 
 // volatile uint8_t* PHASE_CMP[3];
+
+#define SET_PHASE(phase) {\
+	uint8_t phase_masks[3] = { (phase >> 8) & 1, ((phase + 171) >> 8) & 1, ((phase + 341) >> 8) & 1 };\
+	OCR0B = HALF_SINE[phase & 0xFF];\
+	OCR0A = HALF_SINE[(phase + 171) & 0xFF];\
+	OCR2A = HALF_SINE[(phase + 341) & 0xFF];\
+	TCCR0A = (TCCR0A & 0b00001111) | (-(!phase_masks[1]) & 0b11000000) | (-(!phase_masks[0]) & 0b00110000);\
+	TCCR2A = (TCCR2A & 0b00111111) | (-(!phase_masks[2]) & 0b11000000);\
+	PORTC = (PORTC & 0b11000111) | (phase_masks[2] << 5) | (phase_masks[0] << 4) | (phase_masks[1] << 3);\
+}
 
 void port_init() {
 	// DDRB = 0x3F;
@@ -21,6 +34,10 @@ void port_init() {
 	DDRC |= 0b111 << 3;
 	PORTB = 0;
 	PORTD = 0;
+	
+	EICRA = // 0b01 << 2 | // logic-level change on INT1 generates INT1
+	        0b01;  // logic-level change on INT0 generates INT0
+	EIMSK |= 0b01; // enable INT1 and INT0
 }
 void timer_init() {
 	// GTCCR = 1 << 7 | 0b11;
@@ -51,24 +68,62 @@ int main(void) {
 	// PHASE_CMP[1] = (volatile uint8_t*)0x28; // &OCR0B; // 0x28;// &OCR0B;
 	// PHASE_CMP[2] = (volatile uint8_t*)0x8A; // &OCR1BL; // 0x8A;// &OCR1B;
 	
+	uint16_t encoder_bias = ENCODER_DIV_MOTOR_GCD << 3;
+	Encoder::position = encoder_bias;
+	
 	port_init();
 	timer_init();
 	sei();
 	
+	uint16_t last_encoder = 0;
+	uint16_t current_encoder;
+	uint16_t last_time = TCNT1;
+	uint16_t last_period = 1024;
+	uint8_t majority = 0;
+	uint16_t i = 0;
+	
+	PUT(0, 0);
+	// PORTC |= 1 << 3;
+	// TCCR2A |= 0b11 << 6;
+	// OCR2A = 20;
+	// for(;;);
+		
 	for(;;) {
-		uint8_t phase_masks[3] = { (phase_idx[0] >> 8) & 1, (phase_idx[1] >> 8) & 1, (phase_idx[2] >> 8) & 1 };
-		OCR0A = HALF_SINE[(phase_idx[0]++) & 0xFF];
-		OCR0B = HALF_SINE[(phase_idx[1]++) & 0xFF];
-		OCR2A = HALF_SINE[(phase_idx[2]++) & 0xFF];
-		
-		ATOMIC_BLOCK(ATOMIC_FORCEON) {
-			TCCR0A = (TCCR0A & 0b00001111) | (-(!phase_masks[0]) & 0b11000000) | (-(!phase_masks[1]) & 0b00110000);
-			TCCR2A = (TCCR2A & 0b00111111) | (-(!phase_masks[2]) & 0b11000000); // phase_masks[2]
-			
-			PORTC = (PORTC & 0b11000111) | (phase_masks[2] << 5) | (phase_masks[1] << 4) | (phase_masks[0] << 3);
+		current_encoder = Encoder::position;
+		if(current_encoder > encoder_bias + ENCODER_DIV_MOTOR_GCD || current_encoder < encoder_bias) {
+			// PORTB ^= 1 << 5;
+			ATOMIC_BLOCK(ATOMIC_FORCEON) {
+				current_encoder = encoder_bias + (Encoder::position % ENCODER_DIV_MOTOR_GCD);
+				Encoder::position = current_encoder;
+			}
 		}
-		PORTB |= 1 << 5;
 		
-		_delay_us(20);
+		if(current_encoder != last_encoder) {
+			if(++majority > MAJORITY_THRESHOLD) {
+				// uint16_t current_T1;
+				// ATOMIC_BLOCK(ATOMIC_FORCEON) {
+				// 	current_T1 = TCNT1;
+				// }
+				// last_encoder = current_encoder;
+				
+				// last_period = current_T1 - last_time;
+				// last_time = current_T1;
+				
+				uint16_t next_position = ((uint32_t)current_encoder * NUM_HALF_SINE) * MOTOR_PHASES_PER_ENCODER_TICK;
+				// if(i < 512)
+				// 	eeprom_write_word((uint16_t*)((i++) << 1), next_position);
+				// else
+				// 	PORTB |= 1 << 5;
+				
+				ATOMIC_BLOCK(ATOMIC_FORCEON) {
+					SET_PHASE(next_position);
+				}
+				majority = 0;
+				last_encoder = current_encoder;
+			}
+		}
+		else {
+			majority--;
+		}
 	}
 }

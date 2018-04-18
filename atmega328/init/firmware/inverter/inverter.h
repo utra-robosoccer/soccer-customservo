@@ -1,8 +1,8 @@
 #include <avr/io.h>
 
-volatile uint16_t phase_idx[3] = {
-	0, 171, 341
-};
+// volatile uint16_t phase_idx[3] = {
+// 	0, 171, 341
+// };
 const uint8_t RESTING[3] = {
 	0b010100,
 	0b010001,

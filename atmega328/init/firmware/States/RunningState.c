@@ -50,16 +50,27 @@ void RunningState::setup(const State& previous_state) {
 	TCCR1B = 0b010; // normal + 8x prescaling
 	TCNT1 = 0;
 	
+	EICRA &= ~(0b11 << 2);
+	EIMSK &= ~(1 << 1);
+	
 	// TEMP
-	OCR0A = (HALF_SINE[this->A_phase_angle & 0xFF] >> 2);
-	OCR0B = (HALF_SINE[(this->A_phase_angle + 171) & 0xFF] >> 2);
-	OCR1B = (HALF_SINE[(this->A_phase_angle + 341) & 0xFF] >> 2);
+	SET_PHASE(this->A_phase_angle);
+	// PORTB |= 1 << 5;
+	
+	// for(;;);
 	
 	// GTCCR &= ~(1 << 7);
 }
 void RunningState::spin() {
-	uint16_t last_encoder = Encoder::position;
+	uint16_t encoder_bias = ENCODER_DIV_MOTOR_GCD << 3;
+	ATOMIC_BLOCK(ATOMIC_FORCEON) {
+		Encoder::position = encoder_bias; // we can miss 8 rotations: this is really generous tbh
+	}
+	
+	uint16_t last_encoder = 0;
+	uint16_t current_encoder;
 	uint16_t last_time = TCNT1;
+	uint16_t last_period = 1024; // baseline period: 1024 TCNT1 for an encoder tick: pretty slow.
 	uint8_t majority = 0;
 	for(;;) {
 		// given a velocity and the last time switch (deterministic given the velocity estimate at a given time)
@@ -70,22 +81,50 @@ void RunningState::spin() {
 		// encoder states or the A phase angle. Will probably be safest
 		// to keep these constant and do relative compensation based only
 		// on the encoder count (which is correct up to modulo)
-		if(Encoder::position != last_encoder && ++majority > MAJORITY_THRESHOLD) {
-			last_time = TCNT1;
-			last_encoder = Encoder::position;
-			
-			this->phase = ((last_encoder % ENCODER_DIV_MOTOR_GCD) * (NUM_HALF_SINE << 1)) / ENCODER_DIV_MOTOR_GCD;
+		
+		current_encoder = Encoder::position;
+		if(current_encoder > encoder_bias + ENCODER_DIV_MOTOR_GCD || current_encoder < encoder_bias) {
+			ATOMIC_BLOCK(ATOMIC_FORCEON) {
+				current_encoder = (encoder_bias) + (Encoder::position % ENCODER_DIV_MOTOR_GCD);
+				Encoder::position = current_encoder;
+			}
 		}
-		else if(majority > 0) {
+		
+		if(current_encoder != last_encoder) {
+			if(++majority > MAJORITY_THRESHOLD) {
+				// uint16_t current_T1;
+				// ATOMIC_BLOCK(ATOMIC_FORCEON) {
+				// 	current_T1 = TCNT1;
+				// }
+				// last_encoder = current_encoder;
+				
+				// last_period = current_T1 - last_time;
+				// last_time = current_T1;
+				
+				uint16_t next_position = A_phase_angle + ((uint32_t)current_encoder * NUM_HALF_SINE) * MOTOR_PHASES_PER_ENCODER_TICK;
+				
+				ATOMIC_BLOCK(ATOMIC_FORCEON) {
+					SET_PHASE(next_position);
+				}
+				majority = 0;
+				last_encoder = current_encoder;
+			}
+		}
+		else {
 			majority--;
+			// since the encoder is so fine, with the 1600CPR, there's really no point here since
+			// there are almost as many ticks per motor phase as there are increments of HALF_SINE
+			
+			// ATOMIC_BLOCK(ATOMIC_FORCEON) {
+			// 	uint16_t last_T1 = TCNT1;
+			// }
+			// // yeah this calculation will definitely overflow into int32
+			// uint16_t next_position = A_phase_angle + ((last_encoder % ENCODER_DIV_MOTOR_GCD) * (NUM_HALF_SINE << 1)) * MOTOR_PHASES_PER_ENCODER_TICK +
+			//                          last_T1 * (NUM_HALF_SINE << 1) * MOTOR_PHASES_PER_ENCODER_TICK / last_period;
+			// ATOMIC_BLOCK(ATOMIC_FORCEON) {
+			// 	SET_PHASE(next_position);
+			// }
 		}
-		
-		if(Encoder::position > ENCODER_DIV_MOTOR_GCD || Encoder::position < 0) {
-			// no need to make this atomic; it'll do what it needs to do
-			Encoder::position = Encoder::position % ENCODER_MOTOR_MOD;
-		}
-		
-		last_encoder = Encoder::position;
 	}
 	// if(Encoder::position > 18) {
 	// 	uint16_t current_t1 = TCNT1;
